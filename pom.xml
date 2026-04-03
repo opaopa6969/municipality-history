@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.unlaxer</groupId>
+    <artifactId>municipality-history</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+
+    <name>municipality-history</name>
+    <description>Japanese municipality merger/reorganization history (1970-2028).
+        4,491 records of administrative changes from e-Stat.</description>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <mainClass>org.unlaxer.municipality.MunicipalityHistory</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
