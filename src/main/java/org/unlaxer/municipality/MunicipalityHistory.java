@@ -42,15 +42,31 @@ public class MunicipalityHistory {
     public static MunicipalityHistory load(Path csvPath) throws IOException {
         List<MunicipalityChange> changes = new ArrayList<>();
         try (BufferedReader reader = Files.newBufferedReader(csvPath)) {
-            String line = reader.readLine(); // skip header
-            while ((line = reader.readLine()) != null) {
-                if (line.isBlank()) continue;
-                MunicipalityChange change = MunicipalityChange.fromCsvLine(line);
-                if (change != null) changes.add(change);
-            }
+            loadFromReader(reader, changes);
         }
         changes.sort(Comparator.comparing(c -> c.effectiveDate() != null ? c.effectiveDate() : LocalDate.MIN));
         return new MunicipalityHistory(changes);
+    }
+
+    /** jar同梱のCSVからロード（クラスパスリソース） */
+    public static MunicipalityHistory loadBundled() throws IOException {
+        var is = MunicipalityHistory.class.getResourceAsStream("/data/estat-haichi.csv");
+        if (is == null) throw new IOException("Bundled CSV not found in classpath: /data/estat-haichi.csv");
+        List<MunicipalityChange> changes = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
+            loadFromReader(reader, changes);
+        }
+        changes.sort(Comparator.comparing(c -> c.effectiveDate() != null ? c.effectiveDate() : LocalDate.MIN));
+        return new MunicipalityHistory(changes);
+    }
+
+    private static void loadFromReader(BufferedReader reader, List<MunicipalityChange> changes) throws IOException {
+        String line = reader.readLine(); // skip header
+        while ((line = reader.readLine()) != null) {
+            if (line.isBlank()) continue;
+            MunicipalityChange change = MunicipalityChange.fromCsvLine(line);
+            if (change != null) changes.add(change);
+        }
     }
 
     /** 全レコード数 */
