@@ -37,7 +37,7 @@ public record MunicipalityChange(
     }
 
     /** 完全な市区町村名（郡・政令市名 + 市区町村名） */
-    String fullName() {
+    public String fullName() {
         if (municipality.isEmpty()) return district;
         return district + municipality;
     }
