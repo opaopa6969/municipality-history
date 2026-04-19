@@ -2,7 +2,7 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/org.unlaxer/municipality-history)](https://central.sonatype.com/artifact/org.unlaxer/municipality-history)
 
-日本の自治体統廃合（廃置分合等）の履歴データベース。e-Stat（政府統計の総合窓口）から1970年〜2028年の3,507件の自治体変遷データを収録。
+日本の自治体統廃合（廃置分合等）の履歴データベース。e-Stat（政府統計の総合窓口）から 3,507 件の自治体変遷データを収録。実データは **1970 年〜2024 年**（最終レコード 2024-01-01）。
 
 **CSVデータはjar内に同梱** — 依存を追加するだけで外部ファイル不要で使えます。
 
@@ -53,6 +53,11 @@ for (var c : changes) {
 }
 ```
 
+> **注意:** `findByName` は `reason`（改正事由）列も検索します。
+> 「石狩市に編入」と記載された他自治体のレコードも一致するため、
+> 名称のみで絞り込む場合は `c.fullName().contains(name)` で追加フィルタしてください。
+> 詳細は [docs/architecture.md](docs/architecture.md) を参照。
+
 ### 都道府県の全変遷
 
 ```java
@@ -99,7 +104,7 @@ history.prefectures();  // [北海道, 青森県, ..., 沖縄県]
 
 | 項目 | 値 |
 |------|-----|
-| 期間 | 1970年 〜 2028年 |
+| 実データ期間 | 1970 年〜2024 年（最終レコード 2024-01-01）|
 | レコード数 | 3,507件 |
 | 出典 | [e-Stat 廃置分合等情報](https://www.e-stat.go.jp/municipalities/cities/absorption-separation-of-municipalities) |
 | jarサイズ | 97 KB（CSVデータ同梱） |
@@ -129,6 +134,13 @@ history.prefectures();  // [北海道, 青森県, ..., 沖縄県]
 npx playwright install chromium
 node scripts/download-estat.mjs
 ```
+
+## ドキュメント
+
+- [はじめに（Maven 設定・使用例）](docs/getting-started.md)
+- [アーキテクチャ（MunicipalityChange・findByName 注意点）](docs/architecture.md)
+- [データソース（e-Stat 廃置分合データ・収録範囲）](docs/data-source.md)
+- [設計判断: reason 列の自由文解析方針](docs/decisions/reason-parsing.md)
 
 ## 関連プロジェクト
 
