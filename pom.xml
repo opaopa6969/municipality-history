@@ -41,6 +41,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>jp.go.digital</groupId>
+            <artifactId>abr-utils</artifactId>
+            <version>0.9.4</version>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
