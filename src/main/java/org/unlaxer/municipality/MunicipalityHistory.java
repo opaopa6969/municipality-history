@@ -77,10 +77,44 @@ public class MunicipalityHistory {
         return byCode.getOrDefault(lgCode, List.of());
     }
 
-    /** 自治体名（部分一致）で検索 */
+    /** 自治体名（部分一致）で検索。name 列と reason 列の両方を対象とする（後方互換）。 */
     public List<MunicipalityChange> findByName(String name) {
         return changes.stream()
                 .filter(c -> c.fullName().contains(name) || c.reason().contains(name))
+                .toList();
+    }
+
+    /**
+     * 自治体名（部分一致）で検索。name 列（district + municipality）のみを対象とする。
+     * {@link #findByName(String)} の reason 列誤ヒットを回避したい場合に使用する。
+     *
+     * @param name 検索キーワード（部分一致）
+     * @return 一致した変遷レコードのリスト
+     */
+    public List<MunicipalityChange> findByNameStrict(String name) {
+        return changes.stream()
+                .filter(c -> c.fullName().contains(name))
+                .toList();
+    }
+
+    /**
+     * 指定日時点で有効（存在）していた自治体レコードを返す。
+     *
+     * <p>「有効」の定義：{@code effectiveDate} が {@code date} 以前であり、
+     * かつ同一 lgCode の次のレコードの {@code effectiveDate} より前（または次のレコードがない）。
+     * すなわち、その日時点で最も新しい変遷レコードを持つ自治体を返す。</p>
+     *
+     * @param date 基準日
+     * @return 指定日時点で有効な自治体変遷レコードのリスト（lgCode ごとに最新の1件）
+     */
+    public List<MunicipalityChange> activeAt(LocalDate date) {
+        return byCode.values().stream()
+                .map(codeChanges -> codeChanges.stream()
+                        .filter(c -> c.effectiveDate() != null && !c.effectiveDate().isAfter(date))
+                        .max(Comparator.comparing(MunicipalityChange::effectiveDate))
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(MunicipalityChange::lgCode))
                 .toList();
     }
 
@@ -113,6 +147,25 @@ public class MunicipalityHistory {
     /** 都道府県一覧 */
     public Set<String> prefectures() {
         return new TreeSet<>(byPrefecture.keySet());
+    }
+
+    /**
+     * e-Stat API の appId を返す。
+     *
+     * <p>優先順位:</p>
+     * <ol>
+     *   <li>環境変数 {@code ESTAT_APP_ID} が設定されていればその値</li>
+     *   <li>フォールバック: CLAUDE.md に記載のデフォルト appId</li>
+     * </ol>
+     *
+     * @return e-Stat appId 文字列
+     */
+    public static String estatAppId() {
+        String envId = System.getenv("ESTAT_APP_ID");
+        if (envId != null && !envId.isBlank()) {
+            return envId;
+        }
+        return "24edfb042993e87548e75f8e26f6f5421646a6fe";
     }
 
     // CLI

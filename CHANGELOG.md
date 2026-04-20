@@ -7,6 +7,23 @@
 
 ---
 
+## [1.0.1] - 2026-04-19
+
+### 追加
+
+- `activeAt(LocalDate)` — 指定日時点で有効な自治体レコードを返す（lgCode ごと最新1件）
+- `findByNameStrict(String)` — name 列のみを対象とした部分一致検索（reason 列誤ヒットを回避）
+- `estatAppId()` — e-Stat appId を返す static メソッド（環境変数 `ESTAT_APP_ID` 優先、フォールバックあり）
+- JUnit 5 テスト追加（loadBundled / findByName / findByNameStrict / activeAt / timeline / changesSince）
+- CI ワークフロー追加（`.github/workflows/ci.yml`）
+
+### 変更なし（後方互換維持）
+
+- `findByName(String)` の挙動は変更なし（name + reason 両列検索）
+- `MunicipalityChange` の signature は変更なし
+
+---
+
 ## [1.0.0] - 2025-07-01
 
 ### 追加
