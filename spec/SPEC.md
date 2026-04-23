@@ -20,6 +20,7 @@
 10. [非機能要件](#10-非機能要件)
 11. [テスト戦略](#11-テスト戦略)
 12. [デプロイ / 運用](#12-デプロイ--運用)
+13. [Mermaid 図](#13-mermaid-図)
 
 ---
 
@@ -1725,6 +1726,139 @@ System.out.println(change.reason());
 |---|---|---|
 | japanpost-history | https://github.com/opaopa6969/japanpost-history | 時系列郵便番号辞書（2007〜現在） |
 | ABRUtils | https://github.com/opaopa6969/ABRUtils | 住所基盤レジストリ検索ライブラリ（runtime 依存） |
+
+---
+
+## 13. Mermaid 図
+
+### 13.1 classDiagram — MunicipalityChange record + MunicipalityHistory 13 メソッド
+
+```mermaid
+classDiagram
+    class MunicipalityChange {
+        +String lgCode
+        +String prefecture
+        +String district
+        +String districtKana
+        +String municipality
+        +String municipalityKana
+        +LocalDate effectiveDate
+        +String reason
+        +String fullName()
+        ~fromCsvLine(String) MunicipalityChange$
+        -parseCsv(String) String[]$
+        -unquote(String) String$
+        -parseDate(String) LocalDate$
+    }
+
+    class MunicipalityHistory {
+        -List~MunicipalityChange~ changes
+        -Map~String,List~MunicipalityChange~~ byCode
+        -Map~String,List~MunicipalityChange~~ byPrefecture
+        +loadBundled() MunicipalityHistory$
+        +load(Path) MunicipalityHistory$
+        +size() int
+        +findByCode(String) List~MunicipalityChange~
+        +findByName(String) List~MunicipalityChange~
+        +findByNameStrict(String) List~MunicipalityChange~
+        +findByPrefecture(String) List~MunicipalityChange~
+        +activeAt(LocalDate) List~MunicipalityChange~
+        +timeline(String) List~MunicipalityChange~
+        +changesSince(LocalDate) List~MunicipalityChange~
+        +changeCountByYear() Map~Integer,Long~
+        +prefectures() Set~String~
+        +estatAppId() String$
+    }
+
+    MunicipalityHistory "1" *-- "3507" MunicipalityChange : changes
+    MunicipalityHistory ..> MunicipalityChange : creates via fromCsvLine
+```
+
+### 13.2 flowchart — reason 自由文 5 パターン解析
+
+```mermaid
+flowchart TD
+    A[reason 自由文] --> B{キーワード判定}
+
+    B -->|「が〜に市制施行」\n「が〜に町制施行」| C[パターン A\n市制・町制施行]
+    B -->|「が合併し、〜を新設」| D[パターン B\n新設合併]
+    B -->|「が〜に編入合併」| E[パターン C\n編入合併]
+    B -->|「への政令指定都市施行」\n複数行・区新設| F[パターン D\n政令指定都市施行]
+    B -->|「の区の再編」\n全角括弧コード混在| G[パターン E\n区の再編]
+
+    C --> H[旧1件 → 新1件]
+    D --> I[旧N件 → 新1件\n読点区切り]
+    E --> J[旧N件 → 既存1件\n吸収先コード]
+    F --> K[旧市 → 新市\n区コード複数新設]
+    G --> L[区名・区域変更\n長文・混在コード]
+
+    H --> M{現バージョン\n構造化パース}
+    I --> M
+    J --> M
+    K --> M
+    L --> M
+
+    M -->|実施しない| N[文字列として保持\nreason列そのまま]
+    M -->|将来候補| O[旧コード→新コード\n変換テーブル生成\nBACKLOG]
+```
+
+### 13.3 graph TB — byCode / byPrefecture インデックス構造
+
+```mermaid
+graph TB
+    CSV["estat-haichi.csv\n3,507件 / 97KB"]
+
+    CSV -->|fromCsvLine| PARSE[MunicipalityChange\nリスト構築]
+    PARSE -->|effectiveDate昇順ソート\nnull=LocalDate.MIN| SORT[ソート済みリスト\nchanges: List&lt;MunicipalityChange&gt;]
+
+    SORT --> IDX{インデックス構築}
+
+    IDX -->|lgCodeでグループ化| BYCODE["byCode\nMap&lt;String, List&lt;MunicipalityChange&gt;&gt;\n約3,500エントリ\n現存+廃止済みコード両方"]
+    IDX -->|prefectureでグループ化| BYPREF["byPrefecture\nMap&lt;String, List&lt;MunicipalityChange&gt;&gt;\n47都道府県"]
+
+    BYCODE -->|O(1)| FC[findByCode\ntimeline]
+    BYCODE -->|全値スキャン O(n)| AA[activeAt]
+    BYPREF -->|O(1)| FP[findByPrefecture\nprefectures]
+    SORT -->|全件スキャン O(n)| FN[findByName\nfindByNameStrict\nchangesSince\nchangeCountByYear]
+
+    style BYCODE fill:#dff0d8
+    style BYPREF fill:#d9edf7
+    style SORT fill:#fcf8e3
+```
+
+### 13.4 sequenceDiagram — activeAt(LocalDate) 有効判定フロー
+
+```mermaid
+sequenceDiagram
+    participant Caller as 呼び出し元
+    participant MH as MunicipalityHistory
+    participant byCode as byCode Map
+    participant Stream as Stream処理
+
+    Caller->>MH: activeAt(LocalDate date)
+    MH->>byCode: values() 取得
+    byCode-->>MH: Collection&lt;List&lt;MunicipalityChange&gt;&gt;
+
+    loop lgCode ごと（約3,500件）
+        MH->>Stream: codeChanges.stream()
+        Stream->>Stream: filter: effectiveDate != null\n && !effectiveDate.isAfter(date)
+        Stream->>Stream: max(comparing(effectiveDate))
+        alt 対象レコードあり
+            Stream-->>MH: Optional.of(最新レコード)
+        else 全件が date より後 or effectiveDate=null のみ
+            Stream-->>MH: Optional.empty() → null → 除外
+        end
+    end
+
+    MH->>Stream: filter(Objects::nonNull)
+    MH->>Stream: sorted(comparing(lgCode))
+    MH->>Stream: toList()
+    Stream-->>MH: List&lt;MunicipalityChange&gt;\n lgCodeごと最大1件・lgCode昇順
+
+    MH-->>Caller: List&lt;MunicipalityChange&gt;
+
+    note over Caller,Stream: 廃止済みコードも返る。\n廃止判定にはreason解析が必要（現バージョン未実装）
+```
 
 ---
 
