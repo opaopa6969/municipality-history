@@ -1,4 +1,4 @@
-# プロジェクト作法（ABRUtils準拠）
+# プロジェクト作法
 
 ## コーディング規約
 
@@ -29,7 +29,7 @@ src/main/java/org/unlaxer/<project>/
 - `mvn install -DskipTests -Dgpg.skip=true` — ローカルinstall
 - `mvn deploy` — Maven Central publish
 
-## ABRUtils からの共通パターン
+## 共通パターン
 
 ### スナップショット戦略
 1. まずRDB (PostgreSQL) に投入して動くものを作る
