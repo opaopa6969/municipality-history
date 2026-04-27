@@ -628,21 +628,13 @@ private static String[] parseCsv(String line) {
 
 `MunicipalityHistory` は構築時に 3 つのコレクションを初期化します。
 
-```
-loadBundled() / load(Path)
-        │
-        ▼
- CSV 全行を解析（MunicipalityChange.fromCsvLine）
-        │
-        ▼
- effectiveDate 昇順でソート（null は LocalDate.MIN 扱い）
-        │
-        ▼
- ┌────────────────────────────────────────────────────────────┐
- │ changes: List<MunicipalityChange>               (全件・不変) │
- │ byCode:  Map<String, List<MunicipalityChange>>   (lgCode別) │
- │ byPrefecture: Map<String, List<MunicipalityChange>> (都道府県別) │
- └────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A["loadBundled() / load(Path)"]
+    B["CSV 全行を解析<br/>MunicipalityChange.fromCsvLine"]
+    C["effectiveDate 昇順でソート<br/>null は LocalDate.MIN 扱い"]
+    D["changes: List&lt;MunicipalityChange&gt;<br/>byCode: Map&lt;String, List&lt;MunicipalityChange&gt;&gt;<br/>byPrefecture: Map&lt;String, List&lt;MunicipalityChange&gt;&gt;"]
+    A --> B --> C --> D
 ```
 
 #### 3.5.1 `changes`
@@ -1207,12 +1199,17 @@ Java 21 を最低要件とする詳細な理由:
 
 ### 9.5 依存関係図
 
-```
-municipality-history 1.0.1
-├── [runtime] jp.go.digital:abr-utils:0.9.4
-└── [test]    org.junit.jupiter:junit-jupiter:5.11.4
-                └── org.junit.jupiter:junit-jupiter-api:5.11.4
-                └── org.junit.jupiter:junit-jupiter-engine:5.11.4
+```mermaid
+graph TD
+    A["municipality-history 1.0.1"]
+    B["[runtime] jp.go.digital:abr-utils:0.9.4"]
+    C["[test] org.junit.jupiter:junit-jupiter:5.11.4"]
+    D["org.junit.jupiter:junit-jupiter-api:5.11.4"]
+    E["org.junit.jupiter:junit-jupiter-engine:5.11.4"]
+    A --> B
+    A --> C
+    C --> D
+    C --> E
 ```
 
 ---
@@ -1780,46 +1777,46 @@ classDiagram
 flowchart TD
     A[reason 自由文] --> B{キーワード判定}
 
-    B -->|「が〜に市制施行」\n「が〜に町制施行」| C[パターン A\n市制・町制施行]
-    B -->|「が合併し、〜を新設」| D[パターン B\n新設合併]
-    B -->|「が〜に編入合併」| E[パターン C\n編入合併]
-    B -->|「への政令指定都市施行」\n複数行・区新設| F[パターン D\n政令指定都市施行]
-    B -->|「の区の再編」\n全角括弧コード混在| G[パターン E\n区の再編]
+    B -->|「が〜に市制施行」<br/>「が〜に町制施行」| C[パターン A<br/>市制・町制施行]
+    B -->|「が合併し、〜を新設」| D[パターン B<br/>新設合併]
+    B -->|「が〜に編入合併」| E[パターン C<br/>編入合併]
+    B -->|「への政令指定都市施行」<br/>複数行・区新設| F[パターン D<br/>政令指定都市施行]
+    B -->|「の区の再編」<br/>全角括弧コード混在| G[パターン E<br/>区の再編]
 
     C --> H[旧1件 → 新1件]
-    D --> I[旧N件 → 新1件\n読点区切り]
-    E --> J[旧N件 → 既存1件\n吸収先コード]
-    F --> K[旧市 → 新市\n区コード複数新設]
-    G --> L[区名・区域変更\n長文・混在コード]
+    D --> I[旧N件 → 新1件<br/>読点区切り]
+    E --> J[旧N件 → 既存1件<br/>吸収先コード]
+    F --> K[旧市 → 新市<br/>区コード複数新設]
+    G --> L[区名・区域変更<br/>長文・混在コード]
 
-    H --> M{現バージョン\n構造化パース}
+    H --> M{現バージョン<br/>構造化パース}
     I --> M
     J --> M
     K --> M
     L --> M
 
-    M -->|実施しない| N[文字列として保持\nreason列そのまま]
-    M -->|将来候補| O[旧コード→新コード\n変換テーブル生成\nBACKLOG]
+    M -->|実施しない| N[文字列として保持<br/>reason列そのまま]
+    M -->|将来候補| O[旧コード→新コード<br/>変換テーブル生成<br/>BACKLOG]
 ```
 
 ### 13.3 graph TB — byCode / byPrefecture インデックス構造
 
 ```mermaid
 graph TB
-    CSV["estat-haichi.csv\n3,507件 / 97KB"]
+    CSV["estat-haichi.csv<br/>3,507件 / 97KB"]
 
-    CSV -->|fromCsvLine| PARSE[MunicipalityChange\nリスト構築]
-    PARSE -->|effectiveDate昇順ソート\nnull=LocalDate.MIN| SORT[ソート済みリスト\nchanges: List&lt;MunicipalityChange&gt;]
+    CSV -->|fromCsvLine| PARSE["MunicipalityChange<br/>リスト構築"]
+    PARSE -->|"effectiveDate昇順ソート<br/>null=LocalDate.MIN"| SORT["ソート済みリスト<br/>changes: List&lt;MunicipalityChange&gt;"]
 
     SORT --> IDX{インデックス構築}
 
-    IDX -->|lgCodeでグループ化| BYCODE["byCode\nMap&lt;String, List&lt;MunicipalityChange&gt;&gt;\n約3,500エントリ\n現存+廃止済みコード両方"]
-    IDX -->|prefectureでグループ化| BYPREF["byPrefecture\nMap&lt;String, List&lt;MunicipalityChange&gt;&gt;\n47都道府県"]
+    IDX -->|lgCodeでグループ化| BYCODE["byCode<br/>Map&lt;String, List&lt;MunicipalityChange&gt;&gt;<br/>約3,500エントリ<br/>現存+廃止済みコード両方"]
+    IDX -->|prefectureでグループ化| BYPREF["byPrefecture<br/>Map&lt;String, List&lt;MunicipalityChange&gt;&gt;<br/>47都道府県"]
 
-    BYCODE -->|O(1)| FC[findByCode\ntimeline]
+    BYCODE -->|O(1)| FC["findByCode<br/>timeline"]
     BYCODE -->|全値スキャン O(n)| AA[activeAt]
-    BYPREF -->|O(1)| FP[findByPrefecture\nprefectures]
-    SORT -->|全件スキャン O(n)| FN[findByName\nfindByNameStrict\nchangesSince\nchangeCountByYear]
+    BYPREF -->|O(1)| FP["findByPrefecture<br/>prefectures"]
+    SORT -->|全件スキャン O(n)| FN["findByName<br/>findByNameStrict<br/>changesSince<br/>changeCountByYear"]
 
     style BYCODE fill:#dff0d8
     style BYPREF fill:#d9edf7
@@ -1841,7 +1838,7 @@ sequenceDiagram
 
     loop lgCode ごと（約3,500件）
         MH->>Stream: codeChanges.stream()
-        Stream->>Stream: filter: effectiveDate != null\n && !effectiveDate.isAfter(date)
+        Stream->>Stream: filter: effectiveDate != null<br/>&& !effectiveDate.isAfter(date)
         Stream->>Stream: max(comparing(effectiveDate))
         alt 対象レコードあり
             Stream-->>MH: Optional.of(最新レコード)
@@ -1853,11 +1850,11 @@ sequenceDiagram
     MH->>Stream: filter(Objects::nonNull)
     MH->>Stream: sorted(comparing(lgCode))
     MH->>Stream: toList()
-    Stream-->>MH: List&lt;MunicipalityChange&gt;\n lgCodeごと最大1件・lgCode昇順
+    Stream-->>MH: List&lt;MunicipalityChange&gt;<br/>lgCodeごと最大1件・lgCode昇順
 
     MH-->>Caller: List&lt;MunicipalityChange&gt;
 
-    note over Caller,Stream: 廃止済みコードも返る。\n廃止判定にはreason解析が必要（現バージョン未実装）
+    note over Caller,Stream: 廃止済みコードも返る。<br/>廃止判定にはreason解析が必要（現バージョン未実装）
 ```
 
 ---
