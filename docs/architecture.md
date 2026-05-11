@@ -53,18 +53,14 @@ public String fullName() {
 
 ### 初期化とインデックス構造
 
-```
-loadBundled() / load(Path)
-        ↓
-   CSV 全行を解析（MunicipalityChange.fromCsvLine）
-        ↓
-   effectiveDate 昇順でソート
-        ↓
-   ┌─────────────────────────────────────────────┐
-   │  changes: List<MunicipalityChange>  (全件)  │
-   │  byCode:  Map<lgCode, List<...>>            │
-   │  byPrefecture: Map<prefecture, List<...>>   │
-   └─────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A["loadBundled() / load(Path)"] --> B["CSV 全行を解析<br/>(MunicipalityChange.fromCsvLine)"]
+    B --> C["effectiveDate 昇順でソート"]
+    C --> D["インデックス構築"]
+    D --> D1["changes: List&lt;MunicipalityChange&gt;<br/>(全件)"]
+    D --> D2["byCode: Map&lt;lgCode, List&lt;...&gt;&gt;"]
+    D --> D3["byPrefecture: Map&lt;prefecture, List&lt;...&gt;&gt;"]
 ```
 
 すべてのコレクションは **不変（`List.copyOf`）** で初期化後は変更されません。
