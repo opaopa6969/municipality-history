@@ -3,6 +3,7 @@ package org.unlaxer.municipality;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 廃置分合等情報の1レコード。
@@ -17,7 +18,44 @@ public record MunicipalityChange(
         LocalDate effectiveDate,
         String reason
 ) {
-    static MunicipalityChange fromCsvLine(String line) {
+    /**
+     * このレコードが、対象自治体（lgCode）自身の廃止・合併による消滅を表すかどうかを返す。
+     *
+     * <p>以下のいずれかのパターンに一致する場合に廃止とみなす。</p>
+     * <ul>
+     *   <li>{@code (lgCode)が...に編入} — 他市区町村に吸収合併された</li>
+     *   <li>{@code (lgCode)の...への政令指定都市施行/移行} — 政令市化に伴い旧コードが廃止された</li>
+     *   <li>{@code (lgCode)の廃止} — 直接廃止された</li>
+     * </ul>
+     *
+     * @return このレコードの lgCode が廃止されたことを示す場合 {@code true}
+     */
+    public boolean isAbolished() {
+        String code = lgCode();
+        String r = reason();
+        if (Pattern.compile("\\(" + Pattern.quote(code) + "\\)(?:が|は).*?に編入",
+                Pattern.DOTALL).matcher(r).find()) {
+            return true;
+        }
+        if (Pattern.compile("\\(" + Pattern.quote(code) + "\\)の.*?への政令指定都市(?:施行|移行)",
+                Pattern.DOTALL).matcher(r).find()) {
+            return true;
+        }
+        if (Pattern.compile("\\(" + Pattern.quote(code) + "\\)の廃止").matcher(r).find()) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * CSV 行をパースして {@link MunicipalityChange} を返す。
+     *
+     * @param line CSV の1行
+     * @param lineNumber 1始まりの行番号（ログ用）
+     * @return パース成功時は非 null、列数不足時は {@code null}
+     * @throws CsvParseException パースは成功したが値の変換に失敗した場合
+     */
+    static MunicipalityChange fromCsvLine(String line, int lineNumber) throws CsvParseException {
         String[] cols = parseCsv(line);
         if (cols.length < 8) return null;
         try {
@@ -32,7 +70,28 @@ public record MunicipalityChange(
                     unquote(cols[7])
             );
         } catch (Exception e) {
+            throw new CsvParseException(lineNumber, line, e);
+        }
+    }
+
+    /** 後方互換用のシグネチャ（行番号なし）。内部テストから呼ばれる。 */
+    static MunicipalityChange fromCsvLine(String line) {
+        try {
+            return fromCsvLine(line, -1);
+        } catch (CsvParseException e) {
             return null;
+        }
+    }
+
+    /** CSV パース時の変換エラーを表す例外。 */
+    static final class CsvParseException extends Exception {
+        final int lineNumber;
+        final String rawLine;
+
+        CsvParseException(int lineNumber, String rawLine, Throwable cause) {
+            super("CSV parse error at line " + lineNumber + ": " + cause.getMessage(), cause);
+            this.lineNumber = lineNumber;
+            this.rawLine = rawLine;
         }
     }
 
