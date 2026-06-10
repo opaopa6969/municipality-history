@@ -195,14 +195,22 @@ class MunicipalityHistoryQueryTest {
 
     @Test
     void estatAppId_hasExpectedLength() {
-        String id = MunicipalityHistory.estatAppId();
-        // e-Stat appId は 40 文字の hex 文字列
-        assertTrue(id.length() >= 30, "appId should be reasonably long: " + id);
+        // ESTAT_APP_ID が設定されている環境でのみ値を検証する
+        String envId = System.getenv("ESTAT_APP_ID");
+        if (envId != null && !envId.isBlank()) {
+            String id = MunicipalityHistory.estatAppId();
+            // e-Stat appId は 40 文字の hex 文字列
+            assertTrue(id.length() >= 30, "appId should be reasonably long: " + id);
+        }
     }
 
     @Test
     void estatAppId_containsOnlyAlphanumeric() {
-        String id = MunicipalityHistory.estatAppId();
-        assertTrue(id.matches("[a-zA-Z0-9]+"), "appId should be alphanumeric: " + id);
+        // ESTAT_APP_ID が設定されている環境でのみ値を検証する
+        String envId = System.getenv("ESTAT_APP_ID");
+        if (envId != null && !envId.isBlank()) {
+            String id = MunicipalityHistory.estatAppId();
+            assertTrue(id.matches("[a-zA-Z0-9]+"), "appId should be alphanumeric: " + id);
+        }
     }
 }

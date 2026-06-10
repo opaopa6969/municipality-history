@@ -139,9 +139,24 @@ class MunicipalityHistoryTest {
     // ---- estatAppId ----
 
     @Test
-    void estatAppId_defaultIsNotBlank() {
-        String id = MunicipalityHistory.estatAppId();
-        assertNotNull(id);
-        assertFalse(id.isBlank());
+    void estatAppId_returnsEnvVarWhenSet() {
+        // ESTAT_APP_ID が設定されている環境でのみ値を検証する
+        String envId = System.getenv("ESTAT_APP_ID");
+        if (envId != null && !envId.isBlank()) {
+            String id = MunicipalityHistory.estatAppId();
+            assertNotNull(id);
+            assertFalse(id.isBlank());
+            assertEquals(envId, id);
+        }
+    }
+
+    @Test
+    void estatAppId_throwsWhenEnvVarNotSet() {
+        // ESTAT_APP_ID が未設定のとき IllegalStateException がスローされることを確認する
+        String envId = System.getenv("ESTAT_APP_ID");
+        if (envId == null || envId.isBlank()) {
+            assertThrows(IllegalStateException.class, MunicipalityHistory::estatAppId,
+                    "ESTAT_APP_ID が未設定のとき IllegalStateException がスローされるべき");
+        }
     }
 }

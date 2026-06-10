@@ -61,11 +61,31 @@ public class MunicipalityHistory {
     }
 
     private static void loadFromReader(BufferedReader reader, List<MunicipalityChange> changes) throws IOException {
-        String line = reader.readLine(); // skip header
+        reader.readLine(); // skip header
+        String line;
+        int lineNumber = 1; // header was line 1
+        int skipped = 0;
         while ((line = reader.readLine()) != null) {
+            lineNumber++;
             if (line.isBlank()) continue;
-            MunicipalityChange change = MunicipalityChange.fromCsvLine(line);
-            if (change != null) changes.add(change);
+            try {
+                MunicipalityChange change = MunicipalityChange.fromCsvLine(line, lineNumber);
+                if (change == null) {
+                    skipped++;
+                    System.err.printf("[municipality-history] WARN: skipped line %d (too few columns): %s%n",
+                            lineNumber, line.length() > 120 ? line.substring(0, 120) + "..." : line);
+                } else {
+                    changes.add(change);
+                }
+            } catch (MunicipalityChange.CsvParseException e) {
+                skipped++;
+                System.err.printf("[municipality-history] WARN: skipped line %d (%s): %s%n",
+                        e.lineNumber, e.getCause().getClass().getSimpleName(),
+                        e.rawLine.length() > 120 ? e.rawLine.substring(0, 120) + "..." : e.rawLine);
+            }
+        }
+        if (skipped > 0) {
+            System.err.printf("[municipality-history] WARN: %d line(s) skipped during CSV load.%n", skipped);
         }
     }
 
@@ -104,6 +124,10 @@ public class MunicipalityHistory {
      * かつ同一 lgCode の次のレコードの {@code effectiveDate} より前（または次のレコードがない）。
      * すなわち、その日時点で最も新しい変遷レコードを持つ自治体を返す。</p>
      *
+     * <p>ただし、直近レコードの {@link MunicipalityChange#isAbolished()} が {@code true} の場合
+     * （他自治体への吸収合併・政令指定都市化による旧コード廃止など）は、
+     * 当該 lgCode はその日時点で廃止済みとみなし、結果から除外する。</p>
+     *
      * @param date 基準日
      * @return 指定日時点で有効な自治体変遷レコードのリスト（lgCode ごとに最新の1件）
      */
@@ -114,6 +138,7 @@ public class MunicipalityHistory {
                         .max(Comparator.comparing(MunicipalityChange::effectiveDate))
                         .orElse(null))
                 .filter(Objects::nonNull)
+                .filter(c -> !c.isAbolished())
                 .sorted(Comparator.comparing(MunicipalityChange::lgCode))
                 .toList();
     }
@@ -152,20 +177,25 @@ public class MunicipalityHistory {
     /**
      * e-Stat API の appId を返す。
      *
-     * <p>優先順位:</p>
-     * <ol>
-     *   <li>環境変数 {@code ESTAT_APP_ID} が設定されていればその値</li>
-     *   <li>フォールバック: CLAUDE.md に記載のデフォルト appId</li>
-     * </ol>
+     * <p>環境変数 {@code ESTAT_APP_ID} を必須とする。未設定の場合は
+     * {@link IllegalStateException} をスローする。</p>
+     *
+     * <p>e-Stat の appId は
+     * <a href="https://www.e-stat.go.jp/api/">https://www.e-stat.go.jp/api/</a>
+     * から取得できる。取得した値を環境変数 {@code ESTAT_APP_ID} に設定してから呼び出すこと。</p>
      *
      * @return e-Stat appId 文字列
+     * @throws IllegalStateException 環境変数 {@code ESTAT_APP_ID} が設定されていない場合
      */
     public static String estatAppId() {
         String envId = System.getenv("ESTAT_APP_ID");
         if (envId != null && !envId.isBlank()) {
             return envId;
         }
-        return "24edfb042993e87548e75f8e26f6f5421646a6fe";
+        throw new IllegalStateException(
+                "環境変数 ESTAT_APP_ID が設定されていません。" +
+                "https://www.e-stat.go.jp/api/ で appId を取得し、" +
+                "ESTAT_APP_ID 環境変数に設定してください。");
     }
 
     // CLI
