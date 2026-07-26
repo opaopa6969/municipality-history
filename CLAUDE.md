@@ -77,3 +77,11 @@ public static void main(String[] args) {
 - **現状**: v1.0.0 Maven Central公開済み。CSVデータjar同梱。loadBundled()で外部ファイル不要
 - **データ取得**: scripts/download-estat.mjs (Playwright)
 - **e-Stat appId**: 24edfb042993e87548e75f8e26f6f5421646a6fe
+
+## コーディング規約（unlaxer プロダクト共通）
+
+住所文字列の扱い（正規表現の禁止・char 不可・codePoint 値/位置/長さを `CodePoint` /
+`CodePointIndex` / `CodePointLength` で持つ・`VariantNormalizer` で正規化）は
+**ワークスペース直下の `CLAUDE.md` / `AGENTS.md` が正文**。ABRUtils の
+`scripts/check-address-conventions.py` が Claude Code の PreToolUse hook と
+git pre-commit の両方から同じ判定で弾く。
