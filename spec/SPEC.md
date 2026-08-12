@@ -1,6 +1,6 @@
 # municipality-history 仕様書
 
-バージョン: 1.0.1
+バージョン: 1.0.2
 最終更新: 2026-04-19
 作成者: opaopa6969 / Claude Sonnet 4.6
 
@@ -48,7 +48,7 @@
 | プロジェクト名 | `municipality-history` |
 | groupId | `org.unlaxer` |
 | artifactId | `municipality-history` |
-| 現在バージョン | 1.0.1 |
+| 現在バージョン | 1.0.2 |
 | ライセンス | MIT |
 | リポジトリ | https://github.com/opaopa6969/municipality-history |
 | Maven Central | https://central.sonatype.com/artifact/org.unlaxer/municipality-history |
@@ -1073,13 +1073,13 @@ public static String estatAppId() {
 <dependency>
     <groupId>org.unlaxer</groupId>
     <artifactId>municipality-history</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 
 Gradle (Kotlin DSL):
 ```kotlin
-implementation("org.unlaxer:municipality-history:1.0.1")
+implementation("org.unlaxer:municipality-history:1.0.2")
 ```
 
 Gradle (Groovy DSL):

@@ -125,4 +125,18 @@ public record MunicipalityChange(
         fields.add(cur.toString());
         return fields.toArray(new String[0]);
     }
+
+    /**
+     * CSV レコードの引用符が閉じていない（＝レコードが次行に続く）かを返す。
+     * {@code ""} は引用符のエスケープとして扱う。
+     */
+    static boolean hasUnclosedQuote(CharSequence s) {
+        boolean inQ = false;
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) != '"') continue;
+            if (inQ && i + 1 < s.length() && s.charAt(i + 1) == '"') { i++; continue; }
+            inQ = !inQ;
+        }
+        return inQ;
+    }
 }

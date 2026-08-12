@@ -7,6 +7,31 @@
 
 ---
 
+## [1.0.2] - 2026-08-12
+
+### 修正
+
+- 引用符内に改行を含む CSV レコードを読めるようにした。e-Stat の「改正事由」は複数行にわたるため
+  1行 = 1レコードではないが、`loadFromReader` が `readLine()` 単位でパースしていたため
+  **バンドル CSV 3,507 件のうち 983 行が取りこぼされていた**（レコードの2行目以降が
+  「列数不足」として捨てられ、1行目も引用符が閉じないまま `reason` が途中で切れていた）。
+  引用符が閉じるまで後続行を連結して論理レコードを組み立てるよう修正し、
+  取りこぼしは 0 件になった（`size()` が 3,507 に回復）。
+- 引用符が閉じないまま EOF に達したレコードは、それまでのレコードを失わずにスキップする。
+
+### 追加
+
+- `MunicipalityChange.hasUnclosedQuote(CharSequence)` — 引用符の開閉状態を返す（`""` はエスケープ扱い）
+- `CsvQuotedNewlineTest` — 引用符内改行の合成 CSV とバンドル CSV の回帰テスト（7件）
+
+### ビルド
+
+- `distributionManagement` を追加（GitHub Packages / unlaxer-bom registry に集約）。
+  Maven Central 向けの gpg 署名と central-publishing は `-Pcentral` プロファイルに移動した
+  （`extensions=true` の central-publishing が既定の deploy を置き換えてしまうため）
+
+---
+
 ## [1.0.1] - 2026-04-19
 
 ### 追加

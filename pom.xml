@@ -5,7 +5,7 @@
 
     <groupId>org.unlaxer</groupId>
     <artifactId>municipality-history</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
 
     <name>municipality-history</name>
@@ -32,6 +32,17 @@
         <developerConnection>scm:git:ssh://github.com:opaopa6969/municipality-history.git</developerConnection>
         <url>https://github.com/opaopa6969/municipality-history</url>
     </scm>
+
+    <!-- 単一ホスト方式: unlaxer 群は unlaxer-bom リポの GitHub Packages registry に集約する
+         （onigiri-parser / japanese-parser-common / building-hierarchy と同じ宛先）。
+         要 write:packages 認証（~/.m2/settings.xml の server id=github-unlaxer-bom）。 -->
+    <distributionManagement>
+        <repository>
+            <id>github-unlaxer-bom</id>
+            <name>GitHub Packages (unlaxer-bom registry)</name>
+            <url>https://maven.pkg.github.com/opaopa6969/unlaxer-bom</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -99,27 +110,41 @@
                     <doclint>none</doclint>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>3.2.7</version>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals><goal>sign</goal></goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.7.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <publishingServerId>central</publishingServerId>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Maven Central 公開用。既定の deploy 先は上の distributionManagement（GitHub Packages）なので、
+             Central に出すときだけ -Pcentral で署名と central-publishing を有効にする。
+             central-publishing-maven-plugin は extensions=true で deploy を置き換えるため、
+             既定で有効にしていると GitHub Packages へ deploy できない。 -->
+        <profile>
+            <id>central</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.7.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

@@ -65,28 +65,54 @@ public class MunicipalityHistory {
         String line;
         int lineNumber = 1; // header was line 1
         int skipped = 0;
+        // 改正事由などのフィールドは引用符の中に改行を含むため、1行 = 1レコードではない。
+        // 引用符が閉じるまで後続行を連結して論理レコードを組み立てる。
+        StringBuilder pending = new StringBuilder();
+        int recordStartLine = 0;
         while ((line = reader.readLine()) != null) {
             lineNumber++;
-            if (line.isBlank()) continue;
-            try {
-                MunicipalityChange change = MunicipalityChange.fromCsvLine(line, lineNumber);
-                if (change == null) {
-                    skipped++;
-                    System.err.printf("[municipality-history] WARN: skipped line %d (too few columns): %s%n",
-                            lineNumber, line.length() > 120 ? line.substring(0, 120) + "..." : line);
-                } else {
-                    changes.add(change);
-                }
-            } catch (MunicipalityChange.CsvParseException e) {
-                skipped++;
-                System.err.printf("[municipality-history] WARN: skipped line %d (%s): %s%n",
-                        e.lineNumber, e.getCause().getClass().getSimpleName(),
-                        e.rawLine.length() > 120 ? e.rawLine.substring(0, 120) + "..." : e.rawLine);
+            if (pending.isEmpty()) {
+                if (line.isBlank()) continue;
+                recordStartLine = lineNumber;
+                pending.append(line);
+            } else {
+                pending.append('\n').append(line); // 引用符内の改行はフィールド値として復元する
             }
+            if (MunicipalityChange.hasUnclosedQuote(pending)) continue; // レコードは次行に続く
+            String record = pending.toString();
+            pending.setLength(0);
+            skipped += addParsed(record, recordStartLine, changes);
+        }
+        if (!pending.isEmpty()) {
+            skipped++;
+            System.err.printf("[municipality-history] WARN: skipped record at line %d (unclosed quote at EOF): %s%n",
+                    recordStartLine, truncate(pending.toString()));
         }
         if (skipped > 0) {
-            System.err.printf("[municipality-history] WARN: %d line(s) skipped during CSV load.%n", skipped);
+            System.err.printf("[municipality-history] WARN: %d record(s) skipped during CSV load.%n", skipped);
         }
+    }
+
+    /** 1論理レコードをパースして追加する。スキップしたら 1、成功したら 0 を返す。 */
+    private static int addParsed(String record, int recordStartLine, List<MunicipalityChange> changes) {
+        try {
+            MunicipalityChange change = MunicipalityChange.fromCsvLine(record, recordStartLine);
+            if (change == null) {
+                System.err.printf("[municipality-history] WARN: skipped line %d (too few columns): %s%n",
+                        recordStartLine, truncate(record));
+                return 1;
+            }
+            changes.add(change);
+            return 0;
+        } catch (MunicipalityChange.CsvParseException e) {
+            System.err.printf("[municipality-history] WARN: skipped line %d (%s): %s%n",
+                    e.lineNumber, e.getCause().getClass().getSimpleName(), truncate(e.rawLine));
+            return 1;
+        }
+    }
+
+    private static String truncate(String s) {
+        return s.length() > 120 ? s.substring(0, 120) + "..." : s;
     }
 
     /** 全レコード数 */
