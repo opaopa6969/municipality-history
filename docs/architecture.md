@@ -100,15 +100,22 @@ history.findByName("石狩").stream()
     .toList();
 ```
 
-### `activeAt(LocalDate date)` — 未実装
+### `activeAt(LocalDate date)` — 指定日時点で有効な自治体
 
-Javadoc にのみ記載されています。現バージョン (1.0.0) では実装されていません。
+```java
+public List<MunicipalityChange> activeAt(LocalDate date)
+```
 
+`effectiveDate` が `date` 以前である直近のレコードを lgCode ごとに 1 件ずつ返します。
+直近レコードの `isAbolished()` が `true`（他自治体への吸収合併・政令指定都市化による旧コード廃止等）の lgCode は、その日時点で廃止済みとみなし結果から除外します。
+
+```java
+MunicipalityHistory history = MunicipalityHistory.loadBundled();
+// 2000年4月1日時点で存在した自治体一覧
+List<MunicipalityChange> active = history.activeAt(LocalDate.of(2000, 4, 1));
 ```
-// MunicipalityHistory には activeAt() メソッドは存在しない。
-// 「指定日時点で存在した自治体一覧」は手動で構築する必要がある。
-// 将来バージョンで実装予定（BACKLOG.md 参照）。
-```
+
+v1.0.1 で追加されました（`findByNameStrict` / `estatAppId` と同時）。実装は `MunicipalityHistory.java:134-144`、Javadoc は同 `:120-133` を参照。
 
 ---
 
