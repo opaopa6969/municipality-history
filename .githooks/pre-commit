@@ -1,0 +1,23 @@
+#!/bin/sh
+# unlaxer プロダクト共通のコーディング規約を commit 時に弾く。
+# 有効化（clone 直後に 1 回）: git config core.hooksPath .githooks
+#
+# 判定は staged 差分の**追加行**だけ。既存違反は scripts/address-conventions-baseline.txt で猶予。
+# どうしても通したいときは `git commit --no-verify`（理由を commit message に書く）。
+#
+# checker は workspace の ABRUtils/scripts/check-address-conventions.py を使う。
+# 独立 clone の場合は scripts/check-address-conventions.py を各 repo にコピーすること。
+CHECKER=""
+for candidate in \
+  "../ABRUtils/scripts/check-address-conventions.py" \
+  "scripts/check-address-conventions.py"; do
+  if [ -f "$candidate" ]; then
+    CHECKER="$candidate"
+    break
+  fi
+done
+if [ -z "$CHECKER" ]; then
+  echo "warning: check-address-conventions.py が見つからない。住所規約チェックを skip する。" >&2
+  exit 0
+fi
+python3 "$CHECKER" --staged || exit 1
