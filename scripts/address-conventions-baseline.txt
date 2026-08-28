@@ -1,0 +1,5 @@
+# 既存違反の猶予リスト（municipality-history）。新しい違反だけを弾く。直したら行を消す。
+# 生成: python3 ../ABRUtils/scripts/check-address-conventions.py $(git ls-files '*.java' '*.js')  2026-08-28
+# 対象: 7 ファイル、1 エントリ
+
+src/main/java/org/unlaxer/municipality/MunicipalityChange.java:regex
