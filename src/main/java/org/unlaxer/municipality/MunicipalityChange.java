@@ -33,7 +33,12 @@ public record MunicipalityChange(
      *   <li>{@code (lgCode)の廃止} — 直接廃止された</li>
      *   <li>{@code A(codeA)、B(codeB)が合併し、…を新設} — 合併により別コードの新自治体が
      *       新設され、自身は廃止側に回った（自身が新設側=存続の場合を除く）</li>
+     *   <li>{@code ...（lgCode）...を...に再編} — 区の再編等で旧コードが別コードへ統合された
+     *       （自身が再編後の新コード=存続の場合を除く）</li>
      * </ul>
+     *
+     * <p>括弧は半角 {@code ()} と全角 {@code （）} のいずれにも対応する（e-Stat データは
+     * 区再編 reason で全角括弧を使用する）。</p>
      *
      * <p>合併・新設パターンの新設側は reason 末尾の {@code を新設} 直前の表記で判定する。</p>
      * <ul>
@@ -42,25 +47,35 @@ public record MunicipalityChange(
      *       （同一名称を新設名として継承した存続側）。</li>
      * </ul>
      *
+     * <p>区再編パターンの存続側は {@code に再編} 直前の括弧コードが自身と一致するかで判定する。
+     * 旧コードが変わる（≠自身）なら廃止、一致すれば存続（新コード発行側）。</p>
+     *
      * @return このレコードの lgCode が廃止されたことを示す場合 {@code true}
      */
     public boolean isAbolished() {
         String code = lgCode();
         String r = reason();
-        if (Pattern.compile("\\(" + Pattern.quote(code) + "\\)(?:が|は).*?に編入",
+        String quoted = Pattern.quote(code);
+        if (Pattern.compile("[(（]" + quoted + "[)）](?:が|は).*?に編入",
                 Pattern.DOTALL).matcher(r).find()) {
             return true;
         }
-        if (Pattern.compile("\\(" + Pattern.quote(code) + "\\)の.*?への政令指定都市(?:施行|移行)",
+        if (Pattern.compile("[(（]" + quoted + "[)）]の.*?への政令指定都市(?:施行|移行)",
                 Pattern.DOTALL).matcher(r).find()) {
             return true;
         }
-        if (Pattern.compile("\\(" + Pattern.quote(code) + "\\)の廃止").matcher(r).find()) {
+        if (Pattern.compile("[(（]" + quoted + "[)）]の廃止").matcher(r).find()) {
             return true;
         }
         // 合併・新設パターン: 「…が合併し、…を新設」かつ自身が新設側でなければ廃止。
         // 新設側は末尾の「を新設」直前で判定（括弧コード優先、無ければ名称一致）。
         if (PATTERN合併新設.matcher(r).find() && !isNewlyEstablishedSide(r, code)) {
+            return true;
+        }
+        // 区再編パターン: 「…に再編」で自身のコードが再編前（左側）に含まれ、
+        // かつ再編後のコードが自身でなければ廃止。複数の「に再編」句がある場合は
+        // いずれかの句で廃止側に含まれれば廃止。
+        if (isReorganizedAway(reason, code)) {
             return true;
         }
         return false;
@@ -87,8 +102,8 @@ public record MunicipalityChange(
         int parEnd = -1;
         for (int i = idx - 1; i >= 0; i--) {
             char c = reason.charAt(i);
-            if (c == ')') { parEnd = i; break; }
-            if (c == '(' || c == '（' || c == '）' || c == '、') break;
+            if (c == ')' || c == '）') { parEnd = i; break; }
+            if (c == '(' || c == '（' || c == '、') break;
         }
         if (parEnd >= 0) {
             // 括弧コードあり: (code) を抽出して一致比較
@@ -112,6 +127,65 @@ public record MunicipalityChange(
         }
         String name = reason.substring(nameStart, idx);
         return !name.isEmpty() && name.equals(municipality());
+    }
+
+    /**
+     * 区再編レコードにおいて自身が廃止側（=再編により消滅）かを返す。
+     *
+     * <p>reason 中に {@code （code）} の直後に {@code 、} / {@code を} / {@code （}
+     * （注釈括弧）のいずれかが続き、その後に {@code に再編} が現れる句があり、
+     * かつ {@code に再編} 直前の括弧コード（再編先）が自身と一致しなければ、
+     * 自身は廃止側とみなす。括弧は半角 {@code ()} と全角 {@code （）} のいずれにも対応する。</p>
+     *
+     * <p>{@code 浜松市（22130）の区の再編…} のように {@code （code）の} と続く親自治体
+     * （政令市）のコードは、{@code （code）} の直後が {@code の} であるため再編元リストの
+     * メンバとはみなされず、廃止扱いとはならない。</p>
+     *
+     * @param reason 変更理由文
+     * @param code 自身の lgCode
+     * @return 自身が再編で廃止側と判断される場合 {@code true}
+     */
+    private static boolean isReorganizedAway(String reason, String code) {
+        String quoted = Pattern.quote(code);
+        // 「（code）」の直後に 、/を/（ が続き、その後に「に再編」が現れる句を探す。
+        // 直後が「の」（主語）や「に再編」（再編先）のものは再編元リストではない。
+        java.util.regex.Matcher m = Pattern.compile(
+                "[(（]" + quoted + "[)）](?:、|を|（).*?に再編", Pattern.DOTALL).matcher(reason);
+        while (m.find()) {
+            // 再編先（「に再編」直前の括弧コード）が自身でなければ廃止
+            if (!isReorganizedTo(reason, m.end(), code)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * {@code に再編} が reason の {@code end} の位置で終わるとき、
+     * その直前の括弧コード（再編先）が自身と一致するか。
+     */
+    private static boolean isReorganizedTo(String reason, int end, String code) {
+        // 「に再編」は3文字。end は「に再編」の直後。
+        int idx = end - 3;
+        if (idx < 0) return false;
+        // 「に再編」直前の閉じ括弧を探す: ...(code)に再編
+        int parEnd = -1;
+        for (int i = idx - 1; i >= 0; i--) {
+            char c = reason.charAt(i);
+            if (c == ')' || c == '）') { parEnd = i; break; }
+            if (c == '(' || c == '（' || c == '、' || c == '　') break;
+        }
+        if (parEnd < 0) return false;
+        // 対応する開き括弧を探す
+        int parStart = -1;
+        for (int i = parEnd - 1; i >= 0; i--) {
+            char c = reason.charAt(i);
+            if (c == '(' || c == '（') { parStart = i; break; }
+            if (c == ')' || c == '）') break;
+        }
+        if (parStart < 0) return false;
+        String inner = reason.substring(parStart + 1, parEnd);
+        return inner.equals(code);
     }
 
     /**
