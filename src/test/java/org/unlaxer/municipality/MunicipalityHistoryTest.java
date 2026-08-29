@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -158,5 +159,94 @@ class MunicipalityHistoryTest {
             assertThrows(IllegalStateException.class, MunicipalityHistory::estatAppId,
                     "ESTAT_APP_ID が未設定のとき IllegalStateException がスローされるべき");
         }
+    }
+
+    // ---- 壊れると困るのに検証されていない振る舞い（公開 API 境界値・不変条件）----
+
+    /**
+     * findByName("") は {@code String#contains("")} が常に true となるため
+     * 全レコードを返す。この挙動は呼び出し元が暗黙に依存しうる境界値であり、
+     * 将来「空文字は不正」と弾くように変更すると壊れるため固定化する。
+     */
+    @Test
+    void findByName_emptyString_returnsAllRecords() {
+        List<MunicipalityChange> result = history.findByName("");
+        assertEquals(history.size(), result.size(),
+                "空文字列は全レコードに部分一致するため size と同数になる");
+    }
+
+    /**
+     * findByNameStrict("") も同様に全レコードを返す。
+     * findByName と findByNameStrict の空文字列に対する挙動は一致すべき。
+     */
+    @Test
+    void findByNameStrict_emptyString_returnsAllRecords() {
+        List<MunicipalityChange> result = history.findByNameStrict("");
+        assertEquals(history.size(), result.size(),
+                "findByNameStrict も空文字列で全レコードを返す");
+    }
+
+    /**
+     * findByCode(null) は空リストを返す。
+     * 実データに lgCode=null は存在しないため HashMap#getOrDefault(null) は
+     * 空リストを返すが、null 入力で NPE を投げず安全に空を返すことを固定化する。
+     */
+    @Test
+    void findByCode_null_returnsEmptyWithoutNPE() {
+        // 実データに lgCode=null はないため、null キーでの問い合わせは空リストになる
+        List<MunicipalityChange> result = history.findByCode(null);
+        assertNotNull(result, "null コードでもリストオブジェクトは返す（NPE しない）");
+        assertTrue(result.isEmpty(), "存在しないコード（null 含む）は空リスト");
+    }
+
+    /**
+     * activeAt が返すレコードには isAbolished()==true のものが一切含まれない。
+     * この不変条件は「廃止済み自治体を有効として返さない」という activeAt の核心だが、
+     * 既存テストでは件数やソート順しか検証されていなかった。実データ全体で検証する。
+     */
+    @Test
+    void activeAt_neverContainsAbolishedRecords() {
+        // データ末尾の 2024-01-01 より後なら全レコードが候補に入る
+        List<MunicipalityChange> active = history.activeAt(LocalDate.of(2025, 1, 1));
+        assertFalse(active.isEmpty(), "データ期間内の全自治体が候補に入る");
+        long abolishedCount = active.stream().filter(MunicipalityChange::isAbolished).count();
+        assertEquals(0L, abolishedCount,
+                "activeAt は廃止済みレコードを含めてはならない: " + abolishedCount + " 件含まれる");
+    }
+
+    /**
+     * 集計系3 API の一貫性: changeCountByYear の合計件数と
+     * changesSince(LocalDate.MIN) の件数と、effectiveDate が非 null のレコード数は
+     * すべて一致する（同じ「effectiveDate != null」基準で集計しているため）。
+     * いずれかが別基準で null を除外/含入すると壊れる回帰検出用。
+     */
+    @Test
+    void aggregationAPIs_areConsistentAboutNullDates() {
+        // changeCountByYear の合計
+        long sumByYear = history.changeCountByYear().values().stream()
+                .mapToLong(Long::longValue).sum();
+        // changesSince(MIN) は effectiveDate != null かつ !isBefore(MIN) = effectiveDate != null と同値
+        long sinceMin = history.changesSince(LocalDate.MIN).size();
+        // effectiveDate が非 null のレコード数（全件ベース）
+        long nonNullDates = history.findByName("").stream()  // = 全件
+                .filter(c -> c.effectiveDate() != null)
+                .count();
+
+        assertEquals(nonNullDates, sumByYear,
+                "changeCountByYear の合計は effectiveDate 非 null 件数と一致すべき");
+        assertEquals(nonNullDates, sinceMin,
+                "changesSince(LocalDate.MIN) は effectiveDate 非 null 件数と一致すべき");
+    }
+
+    /**
+     * loadBundled を複数回呼ぶと同じ件数のインスタンスが返る。
+     * クラスパスリソースの再読み込みが冪等であることを検証（ストリームの close 忘れ等で壊れる）。
+     */
+    @Test
+    void loadBundled_isIdempotentAcrossMultipleCalls() throws IOException {
+        int first = history.size();
+        MunicipalityHistory second = MunicipalityHistory.loadBundled();
+        assertEquals(first, second.size(),
+                "loadBundled を複数回呼んでも同じ件数がロードされる");
     }
 }
