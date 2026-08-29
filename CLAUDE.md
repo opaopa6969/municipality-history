@@ -76,7 +76,7 @@ public static void main(String[] args) {
 - **概要**: 自治体統廃合履歴（1970-2028、3,507件、e-Stat）
 - **現状**: v1.0.0 Maven Central公開済み。CSVデータjar同梱。loadBundled()で外部ファイル不要
 - **データ取得**: scripts/download-estat.mjs (Playwright)
-- **e-Stat appId**: 24edfb042993e87548e75f8e26f6f5421646a6fe
+- **e-Stat appId**: 環境変数 `ESTAT_APP_ID` から取得（平文でrepoに書かない。未設定時は `estatAppId()` が例外を投げる）
 
 ## コーディング規約（unlaxer プロダクト共通）
 
