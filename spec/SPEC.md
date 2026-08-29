@@ -1042,14 +1042,13 @@ BACKLOG に以下の UI 拡張が記録されています。
 | 項目 | 値 |
 |---|---|
 | 変数名 | `ESTAT_APP_ID` |
-| 必須 | 任意 |
-| デフォルト値 | `24edfb042993e87548e75f8e26f6f5421646a6fe` |
+| 必須 | 必須 |
 | 用途 | e-Stat API の appId |
 | 参照メソッド | `MunicipalityHistory.estatAppId()` |
 
-**優先順位:**
+**仕様:**
 1. 環境変数 `ESTAT_APP_ID` が設定されていればその値を使用
-2. 未設定または空白の場合はコード内のデフォルト値を使用
+2. 未設定または空白の場合は `IllegalStateException` をスローする（コード内にデフォルト値は持たない）
 
 ```java
 public static String estatAppId() {
@@ -1057,7 +1056,10 @@ public static String estatAppId() {
     if (envId != null && !envId.isBlank()) {
         return envId;
     }
-    return "24edfb042993e87548e75f8e26f6f5421646a6fe";
+    throw new IllegalStateException(
+            "環境変数 ESTAT_APP_ID が設定されていません。" +
+            "https://www.e-stat.go.jp/api/ で appId を取得し、" +
+            "ESTAT_APP_ID 環境変数に設定してください。");
 }
 ```
 

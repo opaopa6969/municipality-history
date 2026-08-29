@@ -38,7 +38,7 @@
 
 - `activeAt(LocalDate)` — 指定日時点で有効な自治体レコードを返す（lgCode ごと最新1件）
 - `findByNameStrict(String)` — name 列のみを対象とした部分一致検索（reason 列誤ヒットを回避）
-- `estatAppId()` — e-Stat appId を返す static メソッド（環境変数 `ESTAT_APP_ID` 優先、フォールバックあり）
+- `estatAppId()` — e-Stat appId を返す static メソッド（環境変数 `ESTAT_APP_ID` 必須、未設定時は例外）
 - JUnit 5 テスト追加（loadBundled / findByName / findByNameStrict / activeAt / timeline / changesSince）
 - CI ワークフロー追加（`.github/workflows/ci.yml`）
 
