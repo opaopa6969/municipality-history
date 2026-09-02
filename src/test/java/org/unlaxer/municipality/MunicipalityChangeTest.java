@@ -118,6 +118,32 @@ class MunicipalityChangeTest {
     }
 
     @Test
+    void isAbolished_複数自治体編入の先頭() {
+        MunicipalityChange c = new MunicipalityChange(
+                "01305", "北海道", "石狩支庁", "いしかりしちょう", "厚田村", "あつたむら",
+                LocalDate.of(2005, 10, 1),
+                "厚田村(01305)、浜益村(01306)が石狩市(01235)に編入");
+        assertTrue(c.isAbolished());
+    }
+
+    @Test
+    void isAbolished_市制施行() {
+        MunicipalityChange c = new MunicipalityChange(
+                "01302", "北海道", "石狩支庁", "いしかりしちょう", "石狩町", "いしかりちょう",
+                LocalDate.of(1996, 9, 1),
+                "石狩町(01302)が石狩市(01235)に市制施行");
+        assertTrue(c.isAbolished());
+    }
+
+    @Test
+    void isAbolished_町制施行は存続() {
+        MunicipalityChange c = new MunicipalityChange(
+                "01302", "北海道", "石狩支庁", "いしかりしちょう", "石狩村", "いしかりむら",
+                LocalDate.of(1955, 1, 1), "石狩村(01302)が石狩町に町制施行");
+        assertFalse(c.isAbolished());
+    }
+
+    @Test
     void isAbolished_直接廃止パターン() {
         MunicipalityChange c = new MunicipalityChange(
                 "04560", "宮城県", "", "", "桃生郡", "もものぐん",
