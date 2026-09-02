@@ -29,6 +29,7 @@ public record MunicipalityChange(
      * <p>以下のいずれかのパターンに一致する場合に廃止とみなす。</p>
      * <ul>
      *   <li>{@code (lgCode)が...に編入} — 他市区町村に吸収合併された</li>
+     *   <li>{@code (lgCode)が...に市制施行} — 市制施行に伴い旧コードが廃止された</li>
      *   <li>{@code (lgCode)の...への政令指定都市施行/移行} — 政令市化に伴い旧コードが廃止された</li>
      *   <li>{@code (lgCode)の廃止} — 直接廃止された</li>
      *   <li>{@code A(codeA)、B(codeB)が合併し、…を新設} — 合併により別コードの新自治体が
@@ -56,7 +57,11 @@ public record MunicipalityChange(
         String code = lgCode();
         String r = reason();
         String quoted = Pattern.quote(code);
-        if (Pattern.compile("[(（]" + quoted + "[)）](?:が|は).*?に編入",
+        if (Pattern.compile("[(（]" + quoted + "[)）](?:が|は|、).*?に編入",
+                Pattern.DOTALL).matcher(r).find()) {
+            return true;
+        }
+        if (Pattern.compile("[(（]" + quoted + "[)）]が.*?に市制施行",
                 Pattern.DOTALL).matcher(r).find()) {
             return true;
         }
