@@ -1464,11 +1464,14 @@ void timeline_isSortedByDate() {
 |---|---|---|
 | `changesSince_2003_notEmpty` | 2003-01-01 以降のレコードが 1 件以上返り、全件の `effectiveDate` が 2003-01-01 以降であること | 全件 `effectiveDate >= 2003-01-01` |
 
-#### グループ 8: `estatAppId` テスト（1件）
+#### グループ 8: `estatAppId` テスト（4件）
 
 | テスト名 | 検証内容 | 期待値 |
 |---|---|---|
-| `estatAppId_defaultIsNotBlank` | `estatAppId()` が null でなく、空白でないこと | `id != null && !id.isBlank()` |
+| `estatAppId_returnsEnvVarWhenSet` | `ESTAT_APP_ID` 設定時に環境変数の値を返すこと | 環境変数の値と一致 |
+| `estatAppId_throwsWhenEnvVarNotSet` | `ESTAT_APP_ID` 未設定・空白時の挙動 | `IllegalStateException` |
+| `estatAppId_hasExpectedLength` | 設定値が十分な長さであること | 30文字以上 |
+| `estatAppId_containsOnlyAlphanumeric` | 設定値が英数字のみであること | 英数字のみ |
 
 ### 11.5 テスト実行コマンド
 
@@ -1497,7 +1500,7 @@ mvn test -Dtest=MunicipalityHistoryTest#findByCode_sapporo
 | `activeAt` | 4件 | 過去日・平成大合併期・未来日・lgCode一意性 |
 | `timeline` | `timeline_isSortedByDate` | ソート順 |
 | `changesSince` | `changesSince_2003_notEmpty` | フィルタ結果 |
-| `estatAppId` | `estatAppId_defaultIsNotBlank` | デフォルト値 |
+| `estatAppId` | `estatAppId_returnsEnvVarWhenSet`, `estatAppId_throwsWhenEnvVarNotSet`, `estatAppId_hasExpectedLength`, `estatAppId_containsOnlyAlphanumeric` | 環境変数の値を返す・未設定時は例外 |
 | `prefectures` | `prefecturesNotEmpty` | 正常系 |
 | `load(Path)` | なし | 未テスト |
 | `findByPrefecture` | なし | 未テスト |
