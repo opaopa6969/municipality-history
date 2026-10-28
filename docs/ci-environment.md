@@ -8,6 +8,10 @@ caulis / opaopa6969 で同じ YAML を使い、runner を変えるために片�
 |---|---|---|
 | `CI_RUNNER_LABELS` | `["ubuntu-latest"]` | `["self-hosted","Linux","X64","municipality-history-ci"]` |
 
+Actions の依存キャッシュは `CI_ACTIONS_CACHE_ENABLED=false` で無効にできます（未設定時は有効）。
+個人側では runner の論理パスと実体パスが異なり `hashFiles` が依存ファイルを見つけられないため
+`false`、caulis 側は `true` に設定しています。Maven / pip 自体のローカルキャッシュとテストは有効です。
+
 runner の変数は JSON 配列で、未設定時は `["ubuntu-latest"]` です。
 `runs-on` は runner 起動前に評価されるため、シェル変数や Environment の変数ではなく
 Repository / Organization Variables の `vars` を使います。認証情報は Secrets に保持します。
